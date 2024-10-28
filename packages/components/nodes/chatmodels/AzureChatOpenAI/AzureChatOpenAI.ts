@@ -1,8 +1,8 @@
 import { AzureOpenAIInput, ChatOpenAI as LangchainChatOpenAI, OpenAIChatInput } from '@langchain/openai'
 import { BaseCache } from '@langchain/core/caches'
 import { BaseLLMParams } from '@langchain/core/language_models/llms'
-import { ICommonObject, IMultiModalOption, INode, INodeData, INodeOptionsValue, INodeParams } from '../../../src/Interface'
-import { getBaseClasses, getCredentialData, getCredentialParam } from '../../../src/utils'
+import { ICommonObject, IMultiModalOption, INode, INodeData, INodeOptionsValue, INodeParams } from '../../../src'
+import { getBaseClasses, getCredentialData, getCredentialParam } from '../../../src'
 import { ChatOpenAI } from '../ChatOpenAI/FlowiseChatOpenAI'
 import { getModels, MODEL_TYPE } from '../../../src/modelLoader'
 
@@ -194,5 +194,4 @@ class AzureChatOpenAI_ChatModels implements INode {
         return model
     }
 }
-
 module.exports = { nodeClass: AzureChatOpenAI_ChatModels }

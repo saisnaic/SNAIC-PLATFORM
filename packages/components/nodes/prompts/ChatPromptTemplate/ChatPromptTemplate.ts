@@ -1,5 +1,5 @@
-import { ICommonObject, IDatabaseEntity, INode, INodeData, INodeParams } from '../../../src/Interface'
-import { getBaseClasses } from '../../../src/utils'
+import { ICommonObject, IDatabaseEntity, INode, INodeData, INodeParams } from '../../../src'
+import { getBaseClasses } from '../../../src'
 import { ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate } from '@langchain/core/prompts'
 import { getVM } from '../../sequentialagents/commonUtils'
 import { DataSource } from 'typeorm'

@@ -25,7 +25,7 @@ import {
 } from '../Interface'
 import { InternalFlowiseError } from '../errors/internalFlowiseError'
 import { ChatFlow } from '../database/entities/ChatFlow'
-import { getRunningExpressApp } from '../utils/getRunningExpressApp'
+import { getRunningExpressApp } from './getRunningExpressApp'
 import {
     isFlowValidForStream,
     buildFlow,
@@ -42,7 +42,7 @@ import {
     getEndingNodes,
     constructGraphs,
     isSameChatId
-} from '../utils'
+} from './index'
 import { validateChatflowAPIKey } from './validateKey'
 import { databaseEntities } from '.'
 import { v4 as uuidv4 } from 'uuid'
@@ -434,7 +434,7 @@ export const utilBuildChatflow = async (req: Request, isInternal: boolean = fals
         }
         await utilAddChatMessage(userMessage)
 
-        let resultText = ''
+        let resultText: string
         if (result.text) resultText = result.text
         else if (result.json) resultText = '```json\n' + JSON.stringify(result.json, null, 2)
         else resultText = JSON.stringify(result, null, 2)

@@ -1,20 +1,24 @@
-import { BaseLanguageModel, BaseLanguageModelCallOptions } from '@langchain/core/language_models/base'
+import { BaseLanguageModel } from '@langchain/core/language_models/base'
 import { BaseLLMOutputParser, BaseOutputParser } from '@langchain/core/output_parsers'
 import { HumanMessage } from '@langchain/core/messages'
 import { ChatPromptTemplate, FewShotPromptTemplate, HumanMessagePromptTemplate, PromptTemplate } from '@langchain/core/prompts'
 import { OutputFixingParser } from 'langchain/output_parsers'
 import { LLMChain } from 'langchain/chains'
 import {
-    IVisionChatModal,
+    additionalCallbacks,
+    ConsoleCallbackHandler,
+    CustomChainHandler,
+    getBaseClasses,
+    handleEscapeCharacters,
     ICommonObject,
     INode,
     INodeData,
     INodeOutputsValue,
     INodeParams,
-    IServerSideEventStreamer
-} from '../../../src/Interface'
-import { additionalCallbacks, ConsoleCallbackHandler, CustomChainHandler } from '../../../src/handler'
-import { getBaseClasses, handleEscapeCharacters } from '../../../src/utils'
+    IServerSideEventStreamer,
+    IVisionChatModal,
+    addTokenUsageCallback
+} from '../../../src'
 import { checkInputs, Moderation, streamResponse } from '../../moderation/Moderation'
 import { formatResponse, injectOutputParser } from '../../outputparsers/OutputParserHelpers'
 import { addImagesToMessages, llmSupportsVision } from '../../../src/multiModalUtils'
@@ -102,13 +106,12 @@ class LLMChain_Chains implements INode {
             }
         }
         if (output === this.name) {
-            const chain = new LLMChain({
+            return new LLMChain({
                 llm: model,
                 outputParser: this.outputParser as BaseLLMOutputParser<string | object>,
                 prompt,
                 verbose: process.env.DEBUG === 'true'
             })
-            return chain
         } else if (output === 'outputPrediction') {
             const chain = new LLMChain({
                 llm: model,
@@ -160,7 +163,7 @@ class LLMChain_Chains implements INode {
 
 const runPrediction = async (
     inputVariables: string[],
-    chain: LLMChain<string | object | BaseLanguageModel<any, BaseLanguageModelCallOptions>>,
+    chain: LLMChain<string | object | BaseLanguageModel>,
     input: string,
     promptValuesRaw: ICommonObject | undefined,
     options: ICommonObject,
@@ -168,7 +171,8 @@ const runPrediction = async (
     disableStreaming?: boolean
 ) => {
     const loggerHandler = new ConsoleCallbackHandler(options.logger)
-    const callbacks = await additionalCallbacks(nodeData, options)
+    let callbacks = await additionalCallbacks(nodeData, options)
+    callbacks = [...callbacks, await addTokenUsageCallback(chain, options)]
 
     const moderations = nodeData.inputs?.inputModeration as Moderation[]
 

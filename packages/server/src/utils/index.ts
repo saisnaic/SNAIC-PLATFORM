@@ -46,6 +46,7 @@ import { DocumentStore } from '../database/entities/DocumentStore'
 import { DocumentStoreFileChunk } from '../database/entities/DocumentStoreFileChunk'
 import { InternalFlowiseError } from '../errors/internalFlowiseError'
 import { StatusCodes } from 'http-status-codes'
+import { Usage } from '../database/entities/Usage'
 
 const QUESTION_VAR_PREFIX = 'question'
 const CHAT_HISTORY_VAR_PREFIX = 'chat_history'
@@ -60,7 +61,8 @@ export const databaseEntities: IDatabaseEntity = {
     Assistant: Assistant,
     Variable: Variable,
     DocumentStore: DocumentStore,
-    DocumentStoreFileChunk: DocumentStoreFileChunk
+    DocumentStoreFileChunk: DocumentStoreFileChunk,
+    Usage: Usage
 }
 
 /**
@@ -496,7 +498,7 @@ export const buildFlow = async ({
 
         const reactFlowNode = flowNodes.find((nd) => nd.id === nodeId)
         const nodeIndex = flowNodes.findIndex((nd) => nd.id === nodeId)
-        if (!reactFlowNode || reactFlowNode === undefined || nodeIndex < 0) continue
+        if (!reactFlowNode || nodeIndex < 0) continue
 
         try {
             const nodeInstanceFilePath = componentNodes[reactFlowNode.data.name].filePath as string

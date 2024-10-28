@@ -25,6 +25,7 @@ import { AddApiKey1720230151480 } from './1720230151480-AddApiKey'
 import { AddActionToChatMessage1721078251523 } from './1721078251523-AddActionToChatMessage'
 import { AddArtifactsToChatMessage1726156258465 } from './1726156258465-AddArtifactsToChatMessage'
 import { AddCustomTemplate1725629836652 } from './1725629836652-AddCustomTemplate'
+import { AddUsage1729859748205 } from './1729859748205-AddUsage'
 
 export const sqliteMigrations = [
     Init1693835579790,
@@ -53,5 +54,6 @@ export const sqliteMigrations = [
     AddApiKey1720230151480,
     AddActionToChatMessage1721078251523,
     AddArtifactsToChatMessage1726156258465,
-    AddCustomTemplate1725629836652
+    AddCustomTemplate1725629836652,
+    AddUsage1729859748205
 ]

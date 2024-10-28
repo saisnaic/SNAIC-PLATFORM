@@ -1,10 +1,9 @@
 import { Logger } from 'winston'
 import { v4 as uuidv4 } from 'uuid'
-import { Client } from 'langsmith'
+import { Client, Client as LangsmithClient, RunTree, RunTreeConfig } from 'langsmith'
 import CallbackHandler from 'langfuse-langchain'
 import lunary from 'lunary'
-import { RunTree, RunTreeConfig, Client as LangsmithClient } from 'langsmith'
-import { Langfuse, LangfuseTraceClient, LangfuseSpanClient, LangfuseGenerationClient } from 'langfuse'
+import { Langfuse, LangfuseGenerationClient, LangfuseSpanClient, LangfuseTraceClient } from 'langfuse'
 
 import { BaseCallbackHandler } from '@langchain/core/callbacks/base'
 import { LangChainTracer, LangChainTracerFields } from '@langchain/core/tracers/tracer_langchain'
@@ -15,8 +14,11 @@ import { LunaryHandler } from '@langchain/community/callbacks/handlers/lunary'
 
 import { getCredentialData, getCredentialParam, getEnvironmentVariable } from './utils'
 import { ICommonObject, IDatabaseEntity, INodeData, IServerSideEventStreamer } from './Interface'
-import { LangWatch, LangWatchSpan, LangWatchTrace, autoconvertTypedValues } from 'langwatch'
+import { autoconvertTypedValues, LangWatch, LangWatchSpan, LangWatchTrace } from 'langwatch'
 import { DataSource } from 'typeorm'
+import { LLMChain } from 'langchain/chains'
+import { ChatOpenAI } from '@langchain/openai'
+import { BaseLanguageModel } from '@langchain/core/language_models/base'
 
 interface AgentRun extends Run {
     actions: AgentAction[]
@@ -80,13 +82,11 @@ export class ConsoleCallbackHandler extends BaseTracer {
 
     getBreadcrumbs(run: Run) {
         const parents = this.getParents(run).reverse()
-        const string = [...parents, run]
+        return [...parents, run]
             .map((parent) => {
-                const name = `${parent.execution_order}:${parent.run_type}:${parent.name}`
-                return name
+                return `${parent.execution_order}:${parent.run_type}:${parent.name}`
             })
             .join(' > ')
-        return string
     }
 
     onChainStart(run: Run) {
@@ -398,6 +398,51 @@ export const additionalCallbacks = async (nodeData: INodeData, options: ICommonO
                 }
             }
         }
+        return callbacks
+    } catch (e) {
+        throw new Error(e)
+    }
+}
+
+class TokenUsageHandler {
+    chatFlowId: string
+    chatId: string
+    appDataSource: DataSource
+    databaseEntities: IDatabaseEntity
+
+    constructor(flowiseOptions: ICommonObject) {
+        this.appDataSource = flowiseOptions.appDataSource
+        this.databaseEntities = flowiseOptions.databaseEntities
+        this.chatId = flowiseOptions.chatId
+        this.chatFlowId = flowiseOptions.chatflowid
+    }
+
+    trackTokenUsageHandler = {
+        handleLLMEnd: async (output: any, runId: any) => {
+            const usageReport = {
+                id: uuidv4(),
+                chatflowid: this.chatFlowId,
+                chatid: this.chatId,
+                date: Date.now(),
+                model: '',
+                runid: runId,
+                usage: output.llmOutput?.estimatedTokenUsage?.totalTokens
+            }
+
+            await this.appDataSource.getRepository(this.databaseEntities['Usage']).save(usageReport)
+        }
+    }
+}
+
+export const addTokenUsageCallback = async (llmChain: LLMChain<string | object | BaseLanguageModel>, options: ICommonObject) => {
+    try {
+        if (llmChain.llm.getName() === ChatOpenAI.name) {
+            const chatOpenAi = llmChain.llm as ChatOpenAI
+            const handler = new TokenUsageHandler(options)
+            chatOpenAi.callbacks = [handler.trackTokenUsageHandler]
+        }
+
+        const callbacks: any = []
         return callbacks
     } catch (e) {
         throw new Error(e)

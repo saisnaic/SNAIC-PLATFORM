@@ -119,6 +119,16 @@ export interface IUpsertHistory {
     date: Date
 }
 
+export interface IUsage {
+    id: string
+    chatflowid: string
+    chatid: string
+    runid: string
+    model: string
+    date: Date
+    usage: number
+}
+
 export interface IComponentNodes {
     [key: string]: INode
 }

@@ -26,6 +26,7 @@ import { AddApiKey1720230151480 } from './1720230151480-AddApiKey'
 import { AddActionToChatMessage1721078251523 } from './1721078251523-AddActionToChatMessage'
 import { AddCustomTemplate1725629836652 } from './1725629836652-AddCustomTemplate'
 import { AddArtifactsToChatMessage1726156258465 } from './1726156258465-AddArtifactsToChatMessage'
+import { AddUsage1729859748205 } from './1729859748205-AddUsage'
 
 export const postgresMigrations = [
     Init1693891895163,
@@ -55,5 +56,6 @@ export const postgresMigrations = [
     AddApiKey1720230151480,
     AddActionToChatMessage1721078251523,
     AddCustomTemplate1725629836652,
-    AddArtifactsToChatMessage1726156258465
+    AddArtifactsToChatMessage1726156258465,
+    AddUsage1729859748205
 ]

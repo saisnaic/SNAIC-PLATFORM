@@ -2,9 +2,9 @@ import axios from 'axios'
 import { BaseLanguageModel } from '@langchain/core/language_models/base'
 import { AgentExecutor } from 'langchain/agents'
 import { LLMChain } from 'langchain/chains'
-import { ICommonObject, INode, INodeData, INodeParams, IServerSideEventStreamer, PromptTemplate } from '../../../src/Interface'
-import { getBaseClasses, getCredentialData, getCredentialParam } from '../../../src/utils'
-import { ConsoleCallbackHandler, CustomChainHandler, additionalCallbacks } from '../../../src/handler'
+import { ICommonObject, INode, INodeData, INodeParams, IServerSideEventStreamer, PromptTemplate } from '../../../src'
+import { getBaseClasses, getCredentialData, getCredentialParam } from '../../../src'
+import { ConsoleCallbackHandler, CustomChainHandler, additionalCallbacks } from '../../../src'
 import { LoadPyodide, finalSystemPrompt, systemPrompt } from './core'
 import { checkInputs, Moderation } from '../../moderation/Moderation'
 import { formatResponse } from '../../outputparsers/OutputParserHelpers'
@@ -192,7 +192,7 @@ json.dumps(my_dict)`
             const chain = new LLMChain({
                 llm: model,
                 prompt: PromptTemplate.fromTemplate(finalSystemPrompt),
-                verbose: process.env.DEBUG === 'true' ? true : false
+                verbose: process.env.DEBUG === 'true'
             })
             const inputs = {
                 question: input,
