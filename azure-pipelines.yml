@@ -22,6 +22,7 @@ stages:
     steps:
     - task: AzureContainerApps@1
       inputs:
+        acrName: 'snaic'
         appSourcePath: $(Build.SourcesDirectory)
         azureSubscription: 'Azure Connection'
         resourceGroup: 'snaic-platform'
