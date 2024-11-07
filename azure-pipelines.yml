@@ -22,7 +22,7 @@ stages:
     steps:
     - task: AzureContainerApps@1
       inputs:
-        azureSubscription: 'Azure-Abonnement 1(55e7830a-1455-406c-9386-d9f0ef56eac6)'
+        azureSubscription: 'Azure Connection'
         resourceGroup: 'snaic-platform'
         targetPort: 3000
         disableTelemetry: true
