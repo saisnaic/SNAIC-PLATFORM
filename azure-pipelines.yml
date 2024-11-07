@@ -20,13 +20,13 @@ stages:
     pool:
       vmImage: ubuntu-latest
     steps:
-    - task: AzureContainerApps@1
-      inputs:
-        acrName: 'snaic'
-        appSourcePath: $(Build.SourcesDirectory)
-        azureSubscription: 'Azure Connection'
-        resourceGroup: 'snaic-platform'
-        targetPort: 3000
-        disableTelemetry: true
-        containerAppName: 'snaic-ai-platform' 
-
+      - task: AzureContainerApps@1
+        inputs:
+          appSourcePath: '$(Build.SourcesDirectory)'
+          azureSubscription: 'Azure Connection'
+          acrName: 'snaic'
+          containerAppName: 'snaic-ai-platform'
+          resourceGroup: 'snaic-platform'
+          containerAppEnvironment: 'test'
+          targetPort: '3000'
+          disableTelemetry: true
