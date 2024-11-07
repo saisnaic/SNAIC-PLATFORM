@@ -22,6 +22,8 @@ stages:
     steps:
       - task: AzureContainerApps@1
         inputs:
+          acrUsername: 'snaic'
+          acrPassword: 'ojGtpGo8X72wbVk3GAULmPo8c2T0oIpyBfaxMbaSzZ+ACRAYGiT3'
           appSourcePath: '$(Build.SourcesDirectory)'
           azureSubscription: 'Azure Connection'
           acrName: 'snaic'
