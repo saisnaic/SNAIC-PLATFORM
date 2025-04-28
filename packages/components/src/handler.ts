@@ -493,7 +493,7 @@ export const additionalCallbacks = async (nodeData: INodeData, options: ICommonO
                     const langSmithApiKey = getCredentialParam('langSmithApiKey', credentialData, nodeData)
                     const langSmithEndpoint = getCredentialParam('langSmithEndpoint', credentialData, nodeData)
 
-                    const client = new Client({
+                    const client = new LangsmithClient({
                         apiUrl: langSmithEndpoint ?? 'https://api.smith.langchain.com',
                         apiKey: langSmithApiKey
                     })
