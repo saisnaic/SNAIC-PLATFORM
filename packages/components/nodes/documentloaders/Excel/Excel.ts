@@ -1,9 +1,20 @@
-import { TextSplitter } from 'langchain/text_splitter'
-import { CSVLoader } from './CsvLoader'
-import { getFileFromStorage, handleDocumentLoaderDocuments, handleDocumentLoaderMetadata, handleDocumentLoaderOutput } from '../../../src'
-import { ICommonObject, IDocument, INode, INodeData, INodeOutputsValue, INodeParams } from '../../../src'
+import {
+    getFileFromStorage,
+    handleDocumentLoaderDocuments,
+    ICommonObject,
+    INode,
+    IDocument,
+    INodeData,
+    INodeOutputsValue,
+    INodeParams,
+    handleDocumentLoaderMetadata,
+    handleDocumentLoaderOutput
+} from '../../../src'
+import Excel from 'exceljs'
+import { Readable } from 'node:stream'
+import { JSONLoader } from 'langchain/document_loaders/fs/json'
 
-class Csv_DocumentLoaders implements INode {
+class Excel_DocumentLoader implements INode {
     label: string
     name: string
     version: number
@@ -16,34 +27,20 @@ class Csv_DocumentLoaders implements INode {
     outputs: INodeOutputsValue[]
 
     constructor() {
-        this.label = 'Csv File'
-        this.name = 'csvFile'
-        this.version = 3.0
+        this.label = 'Excel File'
+        this.name = 'excelFile'
+        this.version = 0.1
         this.type = 'Document'
-        this.icon = 'csv.svg'
+        this.icon = 'excel.svg'
         this.category = 'Document Loaders'
-        this.description = `Load data from CSV files`
+        this.description = `Load data from Excel files`
         this.baseClasses = [this.type]
         this.inputs = [
             {
-                label: 'Csv File',
-                name: 'csvFile',
+                label: 'Excel File',
+                name: 'excelFile',
                 type: 'file',
-                fileType: '.csv'
-            },
-            {
-                label: 'Text Splitter',
-                name: 'textSplitter',
-                type: 'TextSplitter',
-                optional: true
-            },
-            {
-                label: 'Single Column Extraction',
-                name: 'columnName',
-                type: 'string',
-                description: 'Extracting a single column',
-                placeholder: 'Enter column name',
-                optional: true
+                fileType: '.xlsx'
             },
             {
                 label: 'Additional Metadata',
@@ -82,23 +79,23 @@ class Csv_DocumentLoaders implements INode {
     }
 
     getFiles(nodeData: INodeData) {
-        const csvFileBase64 = nodeData.inputs?.csvFile as string
+        const excelFileBase64 = nodeData.inputs?.excelFile as string
 
         let files: string[]
         let fromStorage: boolean = true
 
-        if (csvFileBase64.startsWith('FILE-STORAGE::')) {
-            const fileName = csvFileBase64.replace('FILE-STORAGE::', '')
+        if (excelFileBase64.startsWith('FILE-STORAGE::')) {
+            const fileName = excelFileBase64.replace('FILE-STORAGE::', '')
             if (fileName.startsWith('[') && fileName.endsWith(']')) {
                 files = JSON.parse(fileName)
             } else {
                 files = [fileName]
             }
         } else {
-            if (csvFileBase64.startsWith('[') && csvFileBase64.endsWith(']')) {
-                files = JSON.parse(csvFileBase64)
+            if (excelFileBase64.startsWith('[') && excelFileBase64.endsWith(']')) {
+                files = JSON.parse(excelFileBase64)
             } else {
-                files = [csvFileBase64]
+                files = [excelFileBase64]
             }
 
             fromStorage = false
@@ -107,19 +104,53 @@ class Csv_DocumentLoaders implements INode {
         return { files, fromStorage }
     }
 
-    async getFileData(file: string, { chatflowid }: { chatflowid: string }, fromStorage?: boolean) {
+    async getFileData(file: string, { chatflowid }: { chatflowid: string }, fromStorage?: boolean): Promise<string> {
         if (fromStorage) {
-            return getFileFromStorage(file, chatflowid)
+            const fileData = await getFileFromStorage(file, chatflowid)
+            const excelWorkBook = new Excel.Workbook()
+            await excelWorkBook.xlsx.read(Readable.from(fileData))
+            return this.readWorkbook(excelWorkBook)
         } else {
             const splitDataURI = file.split(',')
             splitDataURI.pop()
-            return Buffer.from(splitDataURI.pop() || '', 'base64')
+            return ''
         }
     }
 
-    async init(nodeData: INodeData, _: string, options: ICommonObject): Promise<any> {
-        const textSplitter = nodeData.inputs?.textSplitter as TextSplitter
-        const columnName = nodeData.inputs?.columnName as string
+    readWorkbook(excelWorkbook: Excel.Workbook) {
+        const worksheets = new Map<string, Map<string, string>[]>()
+        excelWorkbook.eachSheet((worksheet) => {
+            const rows: Map<string, string>[] = []
+            worksheet.eachRow((row) => {
+                const rowValues = new Map<string, string>()
+                row.eachCell((cell, colNumber) => {
+                    const column = worksheet.getColumn(colNumber)
+                    const columnValues = column.values
+                    const headerValue = columnValues[1]
+                    const headerValueAsString = headerValue as string
+                    const cellValue = cell.value as string
+                    rowValues.set(headerValueAsString, cellValue)
+                })
+                rows.push(rowValues)
+            })
+            worksheets.set(worksheet.name, rows)
+        })
+
+        return JSON.stringify(worksheets, replacer)
+
+        function replacer(key: any, value: any) {
+            if (value instanceof Map) {
+                return {
+                    dataType: 'Map',
+                    value: Array.from(value.entries()) // or with spread: value: [...value]
+                }
+            } else {
+                return value
+            }
+        }
+    }
+
+    async init?(nodeData: INodeData, _: string, options: ICommonObject): Promise<any> {
         const metadata = nodeData.inputs?.metadata
         const output = nodeData.outputs?.output as string
         const _omitMetadataKeys = nodeData.inputs?.omitMetadataKeys as string
@@ -134,11 +165,12 @@ class Csv_DocumentLoaders implements INode {
             if (!file) continue
 
             const fileData = await this.getFileData(file, { chatflowid }, fromStorage)
-            const blob = new Blob([fileData])
-            const loader = new CSVLoader(blob, columnName.trim().length === 0 ? undefined : columnName.trim())
+            const buffer = Buffer.from(fileData, 'utf-8')
+            const blob = new Blob([buffer])
+            const loader = new JSONLoader(blob)
 
             // use spread instead of push, because it raises RangeError: Maximum call stack size exceeded when too many docs
-            docs = [...docs, ...(await handleDocumentLoaderDocuments(loader, textSplitter))]
+            docs = [...docs, ...(await handleDocumentLoaderDocuments(loader, undefined))]
         }
 
         docs = handleDocumentLoaderMetadata(docs, _omitMetadataKeys, metadata)
@@ -147,4 +179,4 @@ class Csv_DocumentLoaders implements INode {
     }
 }
 
-module.exports = { nodeClass: Csv_DocumentLoaders }
+module.exports = { nodeClass: Excel_DocumentLoader }

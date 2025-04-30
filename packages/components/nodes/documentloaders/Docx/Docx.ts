@@ -1,5 +1,5 @@
 import { omit } from 'lodash'
-import { ICommonObject, IDocument, INode, INodeData, INodeParams, INodeOutputsValue } from '../../../src/Interface'
+import { ICommonObject, IDocument, INode, INodeData, INodeParams, INodeOutputsValue } from '../../../src'
 import { TextSplitter } from 'langchain/text_splitter'
 import { DocxLoader } from '@langchain/community/document_loaders/fs/docx'
 import { getFileFromStorage, handleEscapeCharacters } from '../../../src'
@@ -87,7 +87,7 @@ class Docx_DocumentLoaders implements INode {
         }
 
         let docs: IDocument[] = []
-        let files: string[] = []
+        let files: string[]
 
         if (docxFileBase64.startsWith('FILE-STORAGE::')) {
             const fileName = docxFileBase64.replace('FILE-STORAGE::', '')

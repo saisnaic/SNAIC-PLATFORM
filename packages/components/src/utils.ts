@@ -1188,7 +1188,7 @@ export const handleDocumentLoaderMetadata = (
 }
 
 export const handleDocumentLoaderDocuments = async (loader: DocumentLoader, textSplitter?: TextSplitter) => {
-    let docs: Document[] = []
+    let docs: Document[]
 
     if (textSplitter) {
         let splittedDocs = await loader.load()
