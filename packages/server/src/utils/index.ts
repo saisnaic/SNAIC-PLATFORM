@@ -13,6 +13,7 @@ import {
     ICredentialReqBody,
     IDepthQueue,
     IExploredNode,
+    IncomingInput,
     INodeData,
     INodeDependencies,
     INodeDirectedGraph,
@@ -23,21 +24,20 @@ import {
     IReactFlowNode,
     IVariable,
     IVariableDict,
-    IVariableOverride,
-    IncomingInput
+    IVariableOverride
 } from '../Interface'
 import { cloneDeep, get, isEqual } from 'lodash'
 import {
     convertChatHistoryToText,
-    getInputVariables,
-    handleEscapeCharacters,
+    FlowiseMemory,
     getEncryptionKeyPath,
+    getInputVariables,
+    getS3Config,
+    handleEscapeCharacters,
     ICommonObject,
     IDatabaseEntity,
-    IMessage,
-    FlowiseMemory,
     IFileUpload,
-    getS3Config
+    IMessage
 } from 'flowise-components'
 import { randomBytes } from 'crypto'
 import { AES, enc } from 'crypto-js'
@@ -356,8 +356,7 @@ export const getFileName = (fileBase64: string): string => {
         return fileNames.join(', ')
     } else {
         const splitDataURI = fileBase64.split(',')
-        const filename = splitDataURI[splitDataURI.length - 1].split(':')[1]
-        return filename
+        return splitDataURI[splitDataURI.length - 1].split(':')[1]
     }
 }
 
@@ -958,7 +957,7 @@ export const getVariableValue = async (
                     variableValue = { id: nodeId }
                 }
 
-                const stringifiedValue = JSON.stringify(JSON.stringify(variableValue))
+                const stringifiedValue = JSON.stringify(JSON.stringify(variableValue, replacer))
                 if (stringifiedValue.startsWith('"') && stringifiedValue.endsWith('"')) {
                     // get rid of the double quotes
                     returnVal = returnVal.split(path).join(stringifiedValue.substring(1, stringifiedValue.length - 1))
@@ -972,6 +971,17 @@ export const getVariableValue = async (
         return returnVal
     }
     return isObject ? JSON.parse(returnVal) : returnVal
+
+    function replacer(key: any, value: any) {
+        if (value instanceof Map) {
+            return {
+                dataType: 'Map',
+                value: Array.from(value.entries()) // or with spread: value: [...value]
+            }
+        } else {
+            return value
+        }
+    }
 }
 
 /**
@@ -1204,8 +1214,7 @@ export const isSameOverrideConfig = (
     newOverrideConfig?: ICommonObject
 ): boolean => {
     if (isInternal) {
-        if (existingOverrideConfig && Object.keys(existingOverrideConfig).length) return false
-        return true
+        return !(existingOverrideConfig && Object.keys(existingOverrideConfig).length)
     }
     // If existing and new overrideconfig are the same
     if (
@@ -1218,8 +1227,7 @@ export const isSameOverrideConfig = (
         return true
     }
     // If there is no existing and new overrideconfig
-    if (!existingOverrideConfig && !newOverrideConfig) return true
-    return false
+    return !existingOverrideConfig && !newOverrideConfig
 }
 
 /**
@@ -1231,8 +1239,7 @@ export const isSameChatId = (existingChatId?: string, newChatId?: string): boole
     if (isEqual(existingChatId, newChatId)) {
         return true
     }
-    if (!existingChatId && !newChatId) return true
-    return false
+    return !existingChatId && !newChatId
 }
 
 /**
@@ -1517,8 +1524,7 @@ export const transformToCredentialEntity = async (body: ICredentialReqBody): Pro
     }
 
     if (body.plainDataObj) {
-        const encryptedData = await encryptCredentialData(body.plainDataObj)
-        credentialBody.encryptedData = encryptedData
+        credentialBody.encryptedData = await encryptCredentialData(body.plainDataObj)
     }
 
     const newCredential = new Credential()
@@ -1644,8 +1650,7 @@ export const findMemoryNode = (nodes: IReactFlowNode[], edges: IReactFlowEdge[])
 
     for (const edge of edges) {
         if (memoryNodeIds.includes(edge.source)) {
-            const memoryNode = nodes.find((node) => node.data.id === edge.source)
-            return memoryNode
+            return nodes.find((node) => node.data.id === edge.source)
         }
     }
 
@@ -1789,7 +1794,7 @@ export const getMulterStorage = () => {
         const s3Client = getS3Config().s3Client
         const Bucket = getS3Config().Bucket
 
-        const upload = multer({
+        return multer({
             storage: multerS3({
                 s3: s3Client,
                 bucket: Bucket,
@@ -1801,7 +1806,6 @@ export const getMulterStorage = () => {
                 }
             })
         })
-        return upload
     } else if (storageType === 'gcs') {
         return multer({
             storage: new MulterGoogleCloudStorage({
