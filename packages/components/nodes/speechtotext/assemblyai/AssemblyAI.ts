@@ -1,4 +1,4 @@
-import { INode, INodeParams } from '../../../src/Interface'
+import { INode, INodeParams } from '../../../src'
 
 class AssemblyAI_SpeechToText implements INode {
     label: string

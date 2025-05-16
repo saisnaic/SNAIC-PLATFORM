@@ -1,11 +1,21 @@
 import { flatten } from 'lodash'
 import { Pinecone } from '@pinecone-database/pinecone'
-import { PineconeStoreParams, PineconeStore } from '@langchain/pinecone'
+import { PineconeStore, PineconeStoreParams } from '@langchain/pinecone'
 import { Embeddings } from '@langchain/core/embeddings'
 import { Document } from '@langchain/core/documents'
 import { VectorStore } from '@langchain/core/vectorstores'
-import { ICommonObject, INode, INodeData, INodeOutputsValue, INodeParams, IndexingResult } from '../../../src/Interface'
-import { FLOWISE_CHATID, getBaseClasses, getCredentialData, getCredentialParam } from '../../../src/utils'
+import {
+    FLOWISE_CHATID,
+    getBaseClasses,
+    getCredentialData,
+    getCredentialParam,
+    ICommonObject,
+    IndexingResult,
+    INode,
+    INodeData,
+    INodeOutputsValue,
+    INodeParams
+} from '../../../src'
 import { addMMRInputParams, howToUseFileUpload, resolveVectorStoreOrRetriever } from '../VectorStoreUtils'
 import { index } from '../../../src/indexing'
 
@@ -164,7 +174,7 @@ class Pinecone_VectorStores implements INode {
                 if (recordManager) {
                     const vectorStore = (await PineconeStore.fromExistingIndex(embeddings, obj)) as unknown as VectorStore
                     await recordManager.createSchema()
-                    const res = await index({
+                    return await index({
                         docsSource: finalDocs,
                         recordManager,
                         vectorStore,
@@ -174,8 +184,6 @@ class Pinecone_VectorStores implements INode {
                             vectorStoreName: pineconeNamespace
                         }
                     })
-
-                    return res
                 } else {
                     await PineconeStore.fromDocuments(finalDocs, embeddings, obj)
                     return { numAdded: finalDocs.length, addedDocs: finalDocs }
@@ -247,8 +255,7 @@ class Pinecone_VectorStores implements INode {
 
         if (pineconeNamespace) obj.namespace = pineconeNamespace
         if (pineconeMetadataFilter) {
-            const metadatafilter = typeof pineconeMetadataFilter === 'object' ? pineconeMetadataFilter : JSON.parse(pineconeMetadataFilter)
-            obj.filter = metadatafilter
+            obj.filter = typeof pineconeMetadataFilter === 'object' ? pineconeMetadataFilter : JSON.parse(pineconeMetadataFilter)
         }
         if (isFileUploadEnabled && options.chatId) {
             obj.filter = obj.filter || {}

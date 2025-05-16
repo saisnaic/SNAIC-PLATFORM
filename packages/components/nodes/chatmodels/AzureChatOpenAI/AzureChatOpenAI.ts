@@ -1,7 +1,7 @@
 import { AzureOpenAIInput, AzureChatOpenAI as LangchainAzureChatOpenAI, ChatOpenAIFields, OpenAIClient } from '@langchain/openai'
 import { BaseCache } from '@langchain/core/caches'
-import { ICommonObject, IMultiModalOption, INode, INodeData, INodeOptionsValue, INodeParams } from '../../../src/Interface'
-import { getBaseClasses, getCredentialData, getCredentialParam } from '../../../src/utils'
+import { ICommonObject, IMultiModalOption, INode, INodeData, INodeOptionsValue, INodeParams } from '../../../src'
+import { getBaseClasses, getCredentialData, getCredentialParam } from '../../../src'
 import { getModels, MODEL_TYPE } from '../../../src/modelLoader'
 import { AzureChatOpenAI } from './FlowiseAzureChatOpenAI'
 

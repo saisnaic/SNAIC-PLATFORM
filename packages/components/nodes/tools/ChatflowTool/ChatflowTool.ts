@@ -2,10 +2,20 @@ import { DataSource } from 'typeorm'
 import { z } from 'zod'
 import { NodeVM } from '@flowiseai/nodevm'
 import { RunnableConfig } from '@langchain/core/runnables'
-import { CallbackManagerForToolRun, Callbacks, CallbackManager, parseCallbackConfigArg } from '@langchain/core/callbacks/manager'
+import { CallbackManager, CallbackManagerForToolRun, Callbacks, parseCallbackConfigArg } from '@langchain/core/callbacks/manager'
 import { StructuredTool } from '@langchain/core/tools'
-import { ICommonObject, IDatabaseEntity, INode, INodeData, INodeOptionsValue, INodeParams } from '../../../src/Interface'
-import { availableDependencies, defaultAllowBuiltInDep, getCredentialData, getCredentialParam } from '../../../src/utils'
+import {
+    availableDependencies,
+    defaultAllowBuiltInDep,
+    getCredentialData,
+    getCredentialParam,
+    ICommonObject,
+    IDatabaseEntity,
+    INode,
+    INodeData,
+    INodeOptionsValue,
+    INodeParams
+} from '../../../src'
 import { v4 as uuidv4 } from 'uuid'
 
 class ChatflowTool_Tools implements INode {
@@ -184,7 +194,7 @@ class ChatflowTool_Tools implements INode {
     }
 }
 
-class ChatflowTool extends StructuredTool {
+export class ChatflowTool extends StructuredTool {
     static lc_name() {
         return 'ChatflowTool'
     }
@@ -364,10 +374,8 @@ try {
         } as any
 
         const vm = new NodeVM(vmOptions)
-        const response = await vm.run(`module.exports = async function() {${code}}()`, __dirname)
-
-        return response
+        return await vm.run(`module.exports = async function() {${code}}()`, __dirname)
     }
 }
 
-module.exports = { nodeClass: ChatflowTool_Tools }
+module.exports = { nodeClass: ChatflowTool_Tools, ChatflowTool }

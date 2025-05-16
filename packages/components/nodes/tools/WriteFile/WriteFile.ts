@@ -2,9 +2,7 @@ import { z } from 'zod'
 import { StructuredTool, ToolParams } from '@langchain/core/tools'
 import { Serializable } from '@langchain/core/load/serializable'
 import { NodeFileStore } from 'langchain/stores/file/node'
-import { INode, INodeData, INodeParams } from '../../../src/Interface'
-import { getBaseClasses } from '../../../src/utils'
-
+import { INode, INodeData, INodeParams, getBaseClasses } from '../../../src'
 abstract class BaseFileStore extends Serializable {
     abstract readFile(path: string): Promise<string>
     abstract writeFile(path: string, contents: string): Promise<void>
