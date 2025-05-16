@@ -446,3 +446,7 @@ export type FollowUpPromptConfig = {
     status: boolean
     selectedProvider: FollowUpPromptProvider
 } & FollowUpPromptProviderConfig
+
+export interface IStorageProvider {
+    writeFile(filePath: string, data: any): Promise<boolean>
+}
