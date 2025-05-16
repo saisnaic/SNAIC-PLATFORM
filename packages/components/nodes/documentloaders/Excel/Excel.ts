@@ -13,6 +13,8 @@ import {
 import Excel from 'exceljs'
 import { Readable } from 'node:stream'
 import { JSONLoader } from 'langchain/document_loaders/fs/json'
+import { Cell } from '../../files/Excel/Model/Cell'
+import { Worksheet } from '../../files/Excel/Model/Worksheet'
 
 class Excel_DocumentLoader implements INode {
     label: string
@@ -29,7 +31,7 @@ class Excel_DocumentLoader implements INode {
     constructor() {
         this.label = 'Excel File'
         this.name = 'excelFile'
-        this.version = 0.1
+        this.version = 0.2
         this.type = 'Document'
         this.icon = 'excel.svg'
         this.category = 'Document Loaders'
@@ -70,8 +72,8 @@ class Excel_DocumentLoader implements INode {
                 baseClasses: [...this.baseClasses, 'json']
             },
             {
-                label: 'Text',
-                name: 'text',
+                label: 'JSON',
+                name: 'json',
                 description: 'Concatenated string from pageContent of documents',
                 baseClasses: ['string', 'json']
             }
@@ -104,7 +106,7 @@ class Excel_DocumentLoader implements INode {
         return { files, fromStorage }
     }
 
-    async getFileData(file: string, { chatflowid }: { chatflowid: string }, fromStorage?: boolean): Promise<string> {
+    async getFileData(file: string, { chatflowid }: { chatflowid: string }, fromStorage?: boolean) {
         if (fromStorage) {
             const fileData = await getFileFromStorage(file, chatflowid)
             const excelWorkBook = new Excel.Workbook()
@@ -113,41 +115,25 @@ class Excel_DocumentLoader implements INode {
         } else {
             const splitDataURI = file.split(',')
             splitDataURI.pop()
-            return ''
+            return {}
         }
     }
 
     readWorkbook(excelWorkbook: Excel.Workbook) {
-        const worksheets = new Map<string, Map<string, string>[]>()
+        const worksheets: Worksheet[] = []
         excelWorkbook.eachSheet((worksheet) => {
-            const rows: Map<string, string>[] = []
+            const worksheetObj = new Worksheet(worksheet.name, [])
             worksheet.eachRow((row) => {
-                const rowValues = new Map<string, string>()
-                row.eachCell((cell, colNumber) => {
-                    const column = worksheet.getColumn(colNumber)
-                    const columnValues = column.values
-                    const headerValue = columnValues[1]
-                    const headerValueAsString = headerValue as string
-                    const cellValue = cell.value as string
-                    rowValues.set(headerValueAsString, cellValue)
+                row.eachCell((cell) => {
+                    const cellObj = Cell.fromExcelCell(cell)
+                    worksheetObj.cells.push(cellObj)
                 })
-                rows.push(rowValues)
             })
-            worksheets.set(worksheet.name, rows)
+            worksheets.push(worksheetObj)
         })
 
-        return JSON.stringify(worksheets, replacer)
-
-        function replacer(key: any, value: any) {
-            if (value instanceof Map) {
-                return {
-                    dataType: 'Map',
-                    value: Array.from(value.entries()) // or with spread: value: [...value]
-                }
-            } else {
-                return value
-            }
-        }
+        // return JSON.stringify(worksheets, replacer)
+        return worksheets
     }
 
     async init?(nodeData: INodeData, _: string, options: ICommonObject): Promise<any> {
@@ -160,12 +146,16 @@ class Excel_DocumentLoader implements INode {
         const chatflowid = options.chatflowid
 
         const { files, fromStorage } = this.getFiles(nodeData)
+        let fileData
 
         for (const file of files) {
             if (!file) continue
 
-            const fileData = await this.getFileData(file, { chatflowid }, fromStorage)
-            const buffer = Buffer.from(fileData, 'utf-8')
+            fileData = await this.getFileData(file, { chatflowid }, fromStorage)
+
+            if (output === 'json') return fileData
+
+            const buffer = Buffer.from(JSON.stringify(fileData, this.replacer), 'utf-8')
             const blob = new Blob([buffer])
             const loader = new JSONLoader(blob)
 
@@ -176,6 +166,17 @@ class Excel_DocumentLoader implements INode {
         docs = handleDocumentLoaderMetadata(docs, _omitMetadataKeys, metadata)
 
         return handleDocumentLoaderOutput(docs, output)
+    }
+
+    protected replacer(key: any, value: any) {
+        if (value instanceof Map) {
+            return {
+                dataType: 'Map',
+                value: Array.from(value.entries()) // or with spread: value: [...value]
+            }
+        } else {
+            return value
+        }
     }
 }
 
