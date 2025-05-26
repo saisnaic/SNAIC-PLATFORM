@@ -42,6 +42,7 @@ class Loop_Tools implements INode {
                 type: 'json',
                 name: 'jsonInput',
                 acceptVariable: true,
+                description: 'Insert the JSON object as a property of `loop`',
                 list: true
             },
             {
@@ -50,6 +51,15 @@ class Loop_Tools implements INode {
                 type: 'string',
                 rows: 4,
                 placeholder: `$.phoneNumbers[:1].type`
+            },
+            {
+                default: false,
+                description:
+                    'If the JPath returns an array collection it will be iterated and the single objects will be used for the sub flow. Otherwise the whole array will be the input',
+                label: 'Iterate array',
+                name: 'iterateArray',
+                optional: true,
+                type: 'boolean'
             },
             {
                 label: 'Select Chatflow',
@@ -66,7 +76,7 @@ class Loop_Tools implements INode {
             {
                 label: 'Aggregate',
                 name: 'aggregate',
-                type: 'list'
+                type: 'string'
             }
         ]
         this.outputs = [
@@ -104,23 +114,29 @@ class Loop_Tools implements INode {
     }
 
     async init(nodeData: INodeData, input: string, options: ICommonObject): Promise<any> {
+        const jsonInput = nodeData.inputs?.jsonInput as string
+        const jsonInputAsJson = JSON.parse(jsonInput)
+        const loopJsonString = jsonInputAsJson['loop']
+        const loopJson = JSON.parse(loopJsonString)
+
+        const selector = nodeData.inputs?.selector as string
+
+        const jp = require('jsonpath')
+        const queried = jp.query(loopJson, selector)
+
+        const results = await this.processInput(queried, nodeData, options)
+
+        const aggregate = nodeData.inputs?.aggregate as string
+        return results
+    }
+
+    async processInput(input: any, nodeData: INodeData, options: ICommonObject): Promise<any> {
         const selectedChatflowId = nodeData.inputs?.selectedChatflow as string
         const returnDirect = nodeData.inputs?.returnDirect as boolean
         const baseURL = options.baseURL as string
         const name = nodeData.inputs?.name as string
         const description = nodeData.inputs?.description as string
-
-        const jsonInput = nodeData.inputs?.jsonInput as string
-        const jsonInputAsJson = JSON.parse(jsonInput)
-
-        const loopJsonString = jsonInputAsJson['loop']
-        const loopJson = JSON.parse(loopJsonString)
-
-        const selector = nodeData.inputs?.selector as string
-        const aggregate = nodeData.inputs?.aggregate as string
-
-        var jp = require('jsonpath')
-        const queried = jp.query(loopJson, selector)
+        const iterateArray = nodeData.inputs?.iterateArray as boolean
 
         const credentialData = await getCredentialData(nodeData.credential ?? '', options)
         const chatflowApiKey = getCredentialParam('chatflowApiKey', credentialData, nodeData)
@@ -130,9 +146,29 @@ class Loop_Tools implements INode {
         let headers = {}
         if (chatflowApiKey) headers = { Authorization: `Bearer ${chatflowApiKey}` }
 
-        var results = []
-        for (let query in queried) {
-            const x = JSON.stringify(queried[0])
+        if (Array.isArray(input) && iterateArray) {
+            let results: any[] = []
+            for (let index = 0; index < input.length; index += 1) {
+                const elementAtIndex = input[index]
+                const arrayInput = JSON.stringify(elementAtIndex)
+                const chatflowTool = new ChatflowTool({
+                    name,
+                    baseURL,
+                    description,
+                    returnDirect,
+                    chatflowid: selectedChatflowId,
+                    startNewSession: true,
+                    headers,
+                    input: arrayInput,
+                    overrideConfig: undefined
+                })
+                const result = await chatflowTool.call({ input: arrayInput })
+                results.push(result)
+            }
+
+            return results
+        } else {
+            const callInput = JSON.stringify(input)
             const chatflowTool = new ChatflowTool({
                 name,
                 baseURL,
@@ -141,16 +177,11 @@ class Loop_Tools implements INode {
                 chatflowid: selectedChatflowId,
                 startNewSession: true,
                 headers,
-                input: x,
+                input: callInput,
                 overrideConfig: undefined
             })
-            const result = await chatflowTool.call({ input: x })
-            results.push(result)
+            return await chatflowTool.call({ input: callInput })
         }
-
-        if (aggregate === 'join') return results
-
-        return {}
     }
 }
 
