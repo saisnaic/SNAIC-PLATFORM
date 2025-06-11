@@ -4,7 +4,8 @@ This custom Flowise node enables dynamic creation, styling, and export of Excel 
 
 ---
 
-![Excel Loader](images/"Excel Loader.png")
+![Excel Loader](images/excel-loader.png)
+
 
 # How to use Excel Node
 
