@@ -3,18 +3,19 @@
 This custom Flowise node enables dynamic creation, styling, and export of Excel `.xlsx` files. It is ideal for generating formatted reports from Flowise pipelines based on LLM output, structured data, or external inputs.
 
 ---
+# How to use Excel Node
 
-## Features
+- Upload File : Provide the .xlsx file as the input.
+- Column : specify the column name or column index (eg: 'Name' or '0'). if nothing is specifed then it extracts all the columns.
+- worksheet Name : If multiple files are present in excel specify the sheet or by default it consider first sheet.
+- output - It should selected as JSON.
 
-- Write to specific Excel cells (e.g., `A1`, `B2`)
-- Apply custom font styles: bold, italic, color, size
-- Configure fill styles: solid colors, patterns
-- Set number formatting (currency, decimals, dates)
-- Export as `.xlsx` buffer
+---
+# Usecase
 
 ---
 
-## Quickstart
+## Quickstart to create Excel Node in flowise
 
 ### 1. Clone & Install
 ```bash
