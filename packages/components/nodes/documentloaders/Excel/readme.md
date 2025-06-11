@@ -3,6 +3,9 @@
 This custom Flowise node enables dynamic creation, styling, and export of Excel `.xlsx` files. It is ideal for generating formatted reports from Flowise pipelines based on LLM output, structured data, or external inputs.
 
 ---
+
+![Excel Loader](images/"Excel Loader.png")
+
 # How to use Excel Node
 
 - Upload File : Provide the .xlsx file as the input.
