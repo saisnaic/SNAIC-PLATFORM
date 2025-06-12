@@ -1,0 +1,244 @@
+# Secrets
+apiVersion: v1
+kind: Secret
+metadata:
+  name: snaic-platform-secrets
+type: Opaque
+stringData:
+  db_host: "e3dc54b4-3215-4863-9eec-2e649294eaf2.postgresql.eu01.onstackit.cloud"
+  db_user: "flowise-user"
+  db_password: "KK2i7qari8WR8dHev6rLW6fjV2K1W78a88LqZ7NpQApLyIYiGmmvzw5bAoW5Tf14"
+  db_name: "snaic-platform"
+  api_key: "apikey"
+---
+---
+# Horizontal Scaling
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: snaic-flowise-hpa
+spec:
+  maxReplicas: 10
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: snaic-platform
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+#---
+## Postgres
+#apiVersion: apps/v1
+#kind: Deployment
+#metadata:
+#  name: postgres
+#spec:
+#  replicas: 1
+#  selector:
+#    matchLabels:
+#      app: postgres
+#  template:
+#    metadata:
+#      labels:
+#        app: postgres
+#    spec:
+#      containers:
+#        - name: postgres
+#          image: postgres
+#          ports:
+#            - containerPort: 5432
+#          env:
+#            - name: POSTGRES_USER
+#              valueFrom:
+#                secretKeyRef:
+#                  key: db_user
+#                  name: snaic-platform-secrets
+#            - name: POSTGRES_PASSWORD
+#              valueFrom:
+#                secretKeyRef:
+#                  key: db_password
+#                  name: snaic-platform-secrets
+#            - name: POSTGRES_DB
+#              valueFrom:
+#                secretKeyRef:
+#                  key: db_name
+#                  name: snaic-platform-secrets
+#          volumeMounts:
+#            - mountPath: /var/lib/postgresql/data
+#              name: postgres-storage
+#      volumes:
+#        - name: postgres-storage
+#          persistentVolumeClaim:
+#            claimName: postgres-pvc
+---
+# SNAIC Platform deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: snaic-platform-deployment
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: snaic-platform
+  template:
+    metadata:
+      labels:
+        app: snaic-platform
+    spec:
+      containers:
+        - name: snaic-platform
+          image: snaic.azurecr.io/ado-task/container-app:37.20250526.1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3000
+          env:
+            - name: DATABASE_TYPE
+              value: postgres
+            - name: DATABASE_HOST
+              valueFrom:
+                secretKeyRef:
+                  key: db_host
+                  name: snaic-platform-secrets
+            - name: DATABASE_PORT
+              value: "5432"
+            - name: DATABASE_USER
+              valueFrom:
+                secretKeyRef:
+                  key: db_user
+                  name: snaic-platform-secrets
+            - name: DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: db_password
+                  name: snaic-platform-secrets
+            - name: DATABASE_NAME
+              valueFrom:
+                secretKeyRef:
+                  key: db_name
+                  name: snaic-platform-secrets
+            - name: DATABASE_SSL
+              value: "true"
+            - name: APIKEY
+              valueFrom:
+                secretKeyRef:
+                  key: api_key
+                  name: snaic-platform-secrets
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 3000
+            initialDelaySeconds: 3
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              port: 3000
+              path: /readiness
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          volumeMounts:
+            - mountPath: /root/.flowise
+              name: snaic-storage
+      volumes:
+        - name: snaic-storage
+          persistentVolumeClaim:
+            claimName: snaic-pvc
+      imagePullSecrets:
+        - name: acr-docker-snaic
+# ---
+## Psotgres Service
+#apiVersion: v1
+#kind: Service
+#metadata:
+#  name: postgres-service
+#spec:
+#  selector:
+#    app: postgres
+#  ports:
+#    - port: 5432
+#      protocol: TCP
+#      targetPort: 5432
+#  type: ClusterIP
+---
+# Platform service
+apiVersion: v1
+kind: Service
+metadata:
+  name: snaic-platform-service
+spec:
+  selector:
+    app: snaic-platform
+  ports:
+    - port: 3000
+      protocol: TCP
+      targetPort: 3000
+  type: ClusterIP
+---
+## Postgres storage
+#apiVersion: v1
+#kind: PersistentVolume
+#metadata:
+#  name: postgres-pv
+#spec:
+#  capacity:
+#    storage: 5Gi
+#  accessModes:
+#    - ReadWriteOnce
+#  hostPath:
+#    path: "/data/postgres"
+#---
+#apiVersion: v1
+#kind: PersistentVolumeClaim
+#metadata:
+#  name: postgres-pvc
+#spec:
+#  accessModes:
+#    - ReadWriteOnce
+#  resources:
+#    requests:
+#      storage: 5Gi
+#---
+# Snaic Platform Storage
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: snaic-pv
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/data/flowise"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: snaic-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+# LoadBalancer
+apiVersion: v1
+kind: Service
+metadata:
+  name: snaic-platform-loadbalancer
+  labels:
+    app: snaic-lb-service
+spec:
+  type: LoadBalancer
+  ports:
+    - protocol: "TCP"
+      port: 3000
+      targetPort: 3000
+      nodePort: 32000
+  selector:
+    app: snaic-platform
