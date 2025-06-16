@@ -22,6 +22,7 @@ stages:
     steps:
       - task: AzureContainerApps@1
         inputs:
+          imageToBuild: 'snaic.azurecr.io/snaic-platform:$(Build.SourceVersion)'
           acrUsername: 'snaic'
           acrPassword: 'ojGtpGo8X72wbVk3GAULmPo8c2T0oIpyBfaxMbaSzZ+ACRAYGiT3'
           appSourcePath: '$(Build.SourcesDirectory)'
