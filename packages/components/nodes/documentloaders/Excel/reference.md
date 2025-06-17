@@ -1,5 +1,7 @@
 # Excel File
 
+![Excel Loader](images/excel-loader.png)
+
 Excel (XLSX/XLS) files are widely used to store structured data in spreadsheet format. This module provides functionality to load and process Excel files within your Flowise workflows.
 
 This module offers a robust Excel document loader that can:
