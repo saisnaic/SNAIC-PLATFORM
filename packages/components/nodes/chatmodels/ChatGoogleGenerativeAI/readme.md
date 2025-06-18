@@ -9,7 +9,7 @@
 
 1. **Chat Models** > drag **ChatGoogleGenerativeAI** node
 
-<figure>![1](images/1.png)</figure>
+![1](images/1.png)
 
 2. **Connect Credential** > click **Create New**
 
