@@ -1,0 +1,29 @@
+{
+  "chat": [
+    {
+      "name": "stackItChatAI",
+      "models": [
+        {
+          "label": "cortecs/Llama-3.3-70B-Instruct-FP8-Dynamic",
+          "name": "cortecs/Llama-3.3-70B-Instruct-FP8-Dynamic",
+          "description": "LLama 3.3"
+        },
+        {
+          "label": "google/gemma-3-27b-it",
+          "name": "google/gemma-3-27b-it",
+          "description": "Gemma 3"
+        },
+        {
+          "label": "neuralmagic/Mistral-Nemo-Instruct-2407-FP8",
+          "name": "neuralmagic/Mistral-Nemo-Instruct-2407-FP8",
+          "description": "Mistral"
+        },
+        {
+          "label": "neuralmagic/Meta-Llama-3.1-8B-Instruct-FP8",
+          "name": "neuralmagic/Meta-Llama-3.1-8B-Instruct-FP8",
+          "description": "LLama 3.1"
+        }
+      ]
+    }
+  ]
+}

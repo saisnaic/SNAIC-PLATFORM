@@ -4,6 +4,7 @@ import * as fs from 'fs'
 import * as path from 'path'
 
 const MASTER_MODEL_LIST = 'https://raw.githubusercontent.com/FlowiseAI/Flowise/main/packages/components/models.json'
+const stackItFile = path.join(__dirname, '..', 'stack-it-models.json')
 
 export enum MODEL_TYPE {
     CHAT = 'chat',
@@ -33,47 +34,52 @@ const isValidUrl = (urlString: string) => {
 
 const getModelConfig = async (category: MODEL_TYPE, name: string) => {
     const modelFile = process.env.MODEL_LIST_CONFIG_JSON || MASTER_MODEL_LIST
+    const collectionOfModelFiles = [modelFile, stackItFile]
 
-    if (!modelFile) {
-        throw new Error('MODEL_LIST_CONFIG_JSON not set')
-    }
-    if (isValidUrl(modelFile)) {
-        try {
-            const resp = await axios.get(modelFile)
-            if (resp.status === 200 && resp.data) {
-                const models = resp.data
-                const categoryModels = models[category]
-                return categoryModels.find((model: INodeOptionsValue) => model.name === name)
-            } else {
-                throw new Error('Error fetching model list')
-            }
-        } catch (e) {
-            const models = await fs.promises.readFile(getModelsJSONPath(), 'utf8')
-            if (models) {
-                const categoryModels = JSON.parse(models)[category]
-                return categoryModels.find((model: INodeOptionsValue) => model.name === name)
-            }
-            return {}
+    for (const modelCollection of collectionOfModelFiles) {
+        if (!modelCollection) {
+            throw new Error('MODEL_LIST_CONFIG_JSON not set')
         }
-    } else {
-        try {
-            if (fs.existsSync(modelFile)) {
-                const models = await fs.promises.readFile(modelFile, 'utf8')
+        if (isValidUrl(modelCollection)) {
+            try {
+                const resp = await axios.get(modelCollection)
+                if (resp.status === 200 && resp.data) {
+                    const models = resp.data
+                    const categoryModels = models[category]
+                    const model = categoryModels.find((model: INodeOptionsValue) => model.name === name)
+                    if (model) return model
+                } else {
+                    throw new Error('Error fetching model list')
+                }
+            } catch (e) {
+                const models = await fs.promises.readFile(getModelsJSONPath(), 'utf8')
                 if (models) {
                     const categoryModels = JSON.parse(models)[category]
-                    return categoryModels.find((model: INodeOptionsValue) => model.name === name)
+                    const model = categoryModels.find((model: INodeOptionsValue) => model.name === name)
+                    if (model) return model
                 }
             }
-            return {}
-        } catch (e) {
-            const models = await fs.promises.readFile(getModelsJSONPath(), 'utf8')
-            if (models) {
-                const categoryModels = JSON.parse(models)[category]
-                return categoryModels.find((model: INodeOptionsValue) => model.name === name)
+        } else {
+            try {
+                if (fs.existsSync(modelCollection)) {
+                    const models = await fs.promises.readFile(modelCollection, 'utf8')
+                    if (models) {
+                        const categoryModels = JSON.parse(models)[category]
+                        const model = categoryModels.find((model: INodeOptionsValue) => model.name === name)
+                        if (model) return model
+                    }
+                }
+            } catch (e) {
+                const models = await fs.promises.readFile(getModelsJSONPath(), 'utf8')
+                if (models) {
+                    const categoryModels = JSON.parse(models)[category]
+                    const model = categoryModels.find((model: INodeOptionsValue) => model.name === name)
+                    if (model) return model
+                }
             }
-            return {}
         }
     }
+    return {}
 }
 
 export const getModels = async (category: MODEL_TYPE, name: string) => {
