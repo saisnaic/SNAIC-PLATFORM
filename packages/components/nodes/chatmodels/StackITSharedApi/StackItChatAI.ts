@@ -22,7 +22,7 @@ class StackItChatAI_ChatModels implements INode {
         this.name = 'stackItChatAI'
         this.version = 0.1
         this.type = 'StackItChatAI'
-        this.icon = 'Azure.svg'
+        this.icon = 'StackIT.svg'
         this.category = 'Chat Models'
         this.description = 'Communication node with StackIt`s shared AI API'
         this.baseClasses = [this.type, 'BaseChatModel']
