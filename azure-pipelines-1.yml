@@ -1,0 +1,50 @@
+# azure-pipelines.yml
+# This pipeline mirrors changes from Azure Git to GitHub.
+
+trigger:
+- main # Or the branch you want to mirror (e.g., develop, master)
+
+variables:
+  githubRepoUrl: 'https://github.com/saisnaic/SNAIC-PLATFORM.git'
+  githubUsername: 'saisnaic' 
+  # IMPORTANT: The GitHub PAT will be stored securely in a pipeline variable group or as a secret variable.
+
+pool:
+  vmImage: 'ubuntu-latest' # Or 'windows-latest' if you prefer
+
+steps:
+- checkout: self # Checkout the source (Azure Git) repository
+  persistCredentials: true # Allows us to push from this repository context
+
+- script: |
+    echo "Starting mirroring process from Azure Git to GitHub..."
+    git config --global user.email "azuredevops@example.com" # Use a generic email or your actual email
+    git config --global user.name "Azure DevOps Mirror"
+  displayName: 'Configure Git User'
+
+- task: CmdLine@2
+  inputs:
+    script: |
+      # Add GitHub as a remote if it doesn't exist
+      git remote add github $(githubRepoUrl) || true 
+      # The '|| true' allows the command to succeed even if the remote already exists.
+      
+      # Set up the remote URL with the PAT for authentication
+      git remote set-url github https://$(githubUsername):$(GitHubPat)@github.com/$(githubUsername)/$(githubRepoName).git
+      
+      # Fetch all branches from Azure Git
+      git fetch origin --prune
+      
+      # Iterate over all local branches (from Azure Git) and push them to GitHub
+      for branch in $(git branch --format="%(refname:short)"); do
+        echo "Mirroring branch: $branch"
+        git push github $branch --force # --force is needed if history diverges, be careful!
+                                        # Consider '--set-upstream' or specific refs if you want more control.
+      done
+      
+      # Optional: Mirror tags as well
+      git push github --tags --force
+      echo "Mirroring complete."
+  displayName: 'Mirror to GitHub'
+  env:
+    GitHubPat: $(GitHubPat) # Pass the secret variable as an environment variable
