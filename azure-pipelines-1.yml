@@ -52,27 +52,25 @@ steps:
       git fetch origin --prune --tags
       
       echo "Listing remote branches (refs/remotes/origin) to mirror:"
-      # --- IMPORTANT CHANGE HERE ---
-      # Iterate over all remote branches from 'origin' (Azure Git) and push them to GitHub.
-      # We use 'refs/remotes/origin/' to get all branches from the Azure Git remote.
-      # We then strip 'origin/' from the name to get just the branch name.
-      for branch in $(git for-each-ref --format='%(refname:short)' refs/remotes/origin/); do
-        # Exclude HEAD, which is not a real branch
-        if [ "$branch" = "origin/HEAD" ]; then
+      
+      # Use a robust method to get all remote branches from 'origin' (Azure Git)
+      # and push them individually to GitHub.
+      # This handles any existing branch names dynamically.
+      for branch_ref in $(git for-each-ref --format='%(refname:lstrip=3)' refs/remotes/origin/); do
+        # Exclude 'HEAD' which is not a real branch and 'main' or other branches if you have specific needs
+        if [[ "$branch_ref" == "HEAD" ]]; then
           continue
         fi
-        # Remove 'origin/' prefix to get the actual branch name
-        branch_name=$(echo $branch | sed 's/^origin\///')
-        echo "Mirroring branch: $branch_name"
+        
+        echo "Mirroring branch: $branch_ref"
         # --force is used here to ensure the GitHub repo matches Azure, even with divergent histories.
         # Capturing output and checking exit code for better debugging.
-        git push github $branch_name --force 2>&1 | tee -a git_push_log.txt
+        git push github "$branch_ref" --force 2>&1 | tee -a git_push_log.txt
         if [ ${PIPESTATUS[0]} -ne 0 ]; then
-            echo "ERROR: Push of branch $branch_name failed. See git_push_log.txt for details."
+            echo "ERROR: Push of branch $branch_ref failed. See git_push_log.txt for details."
             exit 1 # Fail the pipeline if a branch push fails
         fi
       done
-      # --- END IMPORTANT CHANGE ---
       
       # Mirror all tags from Azure Git to GitHub.
       echo "Mirroring all tags..."
