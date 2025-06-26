@@ -2,49 +2,65 @@
 # This pipeline mirrors changes from Azure Git to GitHub.
 
 trigger:
-- main # Or the branch you want to mirror (e.g., develop, master)
+- main # Or the primary branch you want to mirror (e.g., master)
+# Add other branches if you need them mirrored, for example:
+# branches:
+#   include:
+#     - main
+#     - dev
+#     - feature/*
 
-variables:
-  githubRepoUrl: 'https://github.com/saisnaic/SNAIC-PLATFORM.git'
-  githubUsername: 'saisnaic' 
-  # IMPORTANT: The GitHub PAT will be stored securely in a pipeline variable group or as a secret variable.
+# REMOVE THE ENTIRE 'variables:' BLOCK HERE,
+# as all variables are defined in the pipeline's UI settings.
+# The warning "Unexpected value ''" comes from this block being present but empty/commented out.
 
 pool:
-  vmImage: 'ubuntu-latest' # Or 'windows-latest' if you prefer
+  vmImage: 'ubuntu-latest' # Using a hosted Ubuntu agent
 
 steps:
 - checkout: self # Checkout the source (Azure Git) repository
-  persistCredentials: true # Allows us to push from this repository context
+  persistCredentials: true # Allows us to push from this repository context during the pipeline run
 
 - script: |
     echo "Starting mirroring process from Azure Git to GitHub..."
-    git config --global user.email "azuredevops@example.com" # Use a generic email or your actual email
-    git config --global user.name "Azure DevOps Mirror"
+    # Configure Git user for the commits pushed to GitHub
+    git config --global user.email "azuredevops@yourorg.com" # Replace with a suitable email
+    git config --global user.name "Azure DevOps Mirror Bot"
   displayName: 'Configure Git User'
 
 - task: CmdLine@2
   inputs:
     script: |
-      # Add GitHub as a remote if it doesn't exist
+      # Add GitHub as a remote if it doesn't exist.
+      # Using the githubRepoUrl from the pipeline variables defined in the UI.
+      # '|| true' ensures this command doesn't fail the pipeline if the remote already exists.
       git remote add github $(githubRepoUrl) || true 
-      # The '|| true' allows the command to succeed even if the remote already exists.
       
-      # Set up the remote URL with the PAT for authentication
+      # Set up the remote URL with the PAT for authentication.
+      # This is the critical part for correct authentication and URL construction.
+      # Format: https://<github_username>:<github_pat>@github.com/<github_username>/<github_repo_name>.git
       git remote set-url github https://$(githubUsername):$(GitHubPat)@github.com/$(githubUsername)/$(githubRepoName).git
       
-      # Fetch all branches from Azure Git
+      # Fetch all branches and tags from the current (Azure Git) repository.
       git fetch origin --prune
       
-      # Iterate over all local branches (from Azure Git) and push them to GitHub
-      for branch in $(git branch --format="%(refname:short)"); do
+      echo "Listing local branches to mirror:"
+      git for-each-ref --format='%(refname:short)' refs/heads
+      
+      # Iterate over all local branches (from Azure Git) and push them to GitHub.
+      # Using 'git for-each-ref refs/heads' is robust and only lists actual branches.
+      for branch in $(git for-each-ref --format='%(refname:short)' refs/heads); do
         echo "Mirroring branch: $branch"
-        git push github $branch --force # --force is needed if history diverges, be careful!
-                                        # Consider '--set-upstream' or specific refs if you want more control.
+        # --force is used here to ensure the GitHub repo matches Azure, even with divergent histories.
+        # Use with caution, as it can overwrite changes on the destination.
+        git push github $branch --force 
       done
       
-      # Optional: Mirror tags as well
+      # Mirror all tags from Azure Git to GitHub.
       git push github --tags --force
       echo "Mirroring complete."
   displayName: 'Mirror to GitHub'
+  # The PAT is securely passed as an environment variable to the script.
+  # The name here (GitHubPat) must match the variable name defined in your pipeline UI.
   env:
-    GitHubPat: $(GitHubPat) # Pass the secret variable as an environment variable
+    GitHubPat: $(GitHubPat)
