@@ -53,21 +53,24 @@ steps:
       
       echo "Listing remote branches (refs/remotes/origin) to mirror:"
       
-      # Use a robust method to get all remote branches from 'origin' (Azure Git)
+      # Iterate over all remote-tracking branches from 'origin' (Azure Git)
       # and push them individually to GitHub.
-      # This handles any existing branch names dynamically.
-      for branch_ref in $(git for-each-ref --format='%(refname:lstrip=3)' refs/remotes/origin/); do
-        # Exclude 'HEAD' which is not a real branch and 'main' or other branches if you have specific needs
-        if [[ "$branch_ref" == "HEAD" ]]; then
+      # We use 'refs/remotes/origin/' to get all branches from the Azure Git remote.
+      # We then push this full reference to GitHub, ensuring the remote branch is pushed.
+      for branch_ref_full in $(git for-each-ref --format='%(refname)' refs/remotes/origin/); do
+        # Extract the simple branch name (e.g., 'main' from 'refs/remotes/origin/main')
+        branch_name=$(echo "$branch_ref_full" | sed 's/^refs\/remotes\/origin\///')
+
+        # Exclude 'HEAD' which is not a real branch
+        if [[ "$branch_name" == "HEAD" ]]; then
           continue
         fi
         
-        echo "Mirroring branch: $branch_ref"
-        # --force is used here to ensure the GitHub repo matches Azure, even with divergent histories.
-        # Capturing output and checking exit code for better debugging.
-        git push github "$branch_ref" --force 2>&1 | tee -a git_push_log.txt
+        echo "Mirroring branch: $branch_name (from $branch_ref_full)"
+        # Push the full remote-tracking branch ref to GitHub, mapping it to a local-like branch name on GitHub
+        git push github "$branch_ref_full":"$branch_name" --force 2>&1 | tee -a git_push_log.txt
         if [ ${PIPESTATUS[0]} -ne 0 ]; then
-            echo "ERROR: Push of branch $branch_ref failed. See git_push_log.txt for details."
+            echo "ERROR: Push of branch $branch_name failed. See git_push_log.txt for details."
             exit 1 # Fail the pipeline if a branch push fails
         fi
       done
