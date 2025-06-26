@@ -24,7 +24,7 @@ steps:
 - script: |
     echo "Starting mirroring process from Azure Git to GitHub..."
     # Configure Git user for the commits pushed to GitHub
-    git config --global user.email "azuredevops@yourorg.com" # Replace with a suitable email
+    git config --global user.email "sai2000mohit@gmail.com" 
     git config --global user.name "Azure DevOps Mirror Bot"
   displayName: 'Configure Git User'
 
@@ -51,21 +51,28 @@ steps:
       echo "Fetching all branches and tags from Azure Git origin..."
       git fetch origin --prune --tags
       
-      echo "Listing local branches (refs/heads) to mirror:"
-      git for-each-ref --format='%(refname:short)' refs/heads
-      
-      # Iterate over all local branches (from Azure Git) and push them to GitHub.
-      echo "Starting branch mirroring loop..."
-      for branch in $(git for-each-ref --format='%(refname:short)' refs/heads); do
-        echo "Mirroring branch: $branch"
+      echo "Listing remote branches (refs/remotes/origin) to mirror:"
+      # --- IMPORTANT CHANGE HERE ---
+      # Iterate over all remote branches from 'origin' (Azure Git) and push them to GitHub.
+      # We use 'refs/remotes/origin/' to get all branches from the Azure Git remote.
+      # We then strip 'origin/' from the name to get just the branch name.
+      for branch in $(git for-each-ref --format='%(refname:short)' refs/remotes/origin/); do
+        # Exclude HEAD, which is not a real branch
+        if [ "$branch" = "origin/HEAD" ]; then
+          continue
+        fi
+        # Remove 'origin/' prefix to get the actual branch name
+        branch_name=$(echo $branch | sed 's/^origin\///')
+        echo "Mirroring branch: $branch_name"
         # --force is used here to ensure the GitHub repo matches Azure, even with divergent histories.
         # Capturing output and checking exit code for better debugging.
-        git push github $branch --force 2>&1 | tee -a git_push_log.txt
+        git push github $branch_name --force 2>&1 | tee -a git_push_log.txt
         if [ ${PIPESTATUS[0]} -ne 0 ]; then
-            echo "ERROR: Push of branch $branch failed. See git_push_log.txt for details."
+            echo "ERROR: Push of branch $branch_name failed. See git_push_log.txt for details."
             exit 1 # Fail the pipeline if a branch push fails
         fi
       done
+      # --- END IMPORTANT CHANGE ---
       
       # Mirror all tags from Azure Git to GitHub.
       echo "Mirroring all tags..."
