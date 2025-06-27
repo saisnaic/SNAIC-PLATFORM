@@ -1,44 +1,36 @@
 # azure-pipelines-mirror.yml
-# ─────────────────────────────────────────────────────────────
-# Mirrors Azure Repos `main` → GitHub `main` whenever `main` changes
+# Mirrors Azure Repos `main` → GitHub `main`
 
 trigger:
   branches:
-    include:
-      - main        # Azure Repos branch to watch
-
-pr: none            # don’t run for PR validation
+    include: [ main ]            # only when Azure ‘main’ changes
+pr: none                         # don’t validate PRs
 
 variables:
-  - group: GitHubSecrets         # secret GITHUB_PAT lives here
+  - group: GitHubSecrets         # holds secret GITHUB_PAT
 
 pool:
   vmImage: ubuntu-latest
 
 steps:
-# 1) Checkout source
+# 1  Checkout code
 - checkout: self
   persistCredentials: true
-  fetchDepth: 0                  # full history (optional but nice)
+  fetchDepth: 0                  # full history (good for tags & rewrites)
 
-# 2) Push the built commit to GitHub
+# 2  Mirror HEAD → GitHub
 - bash: |
     set -euxo pipefail
-
-    # Identify automated pushes (only used if the script ever writes commits)
     git config --global user.email "build@dev.azure.com"
     git config --global user.name  "Azure DevOps Mirror Bot"
 
-    # Add the GitHub remote if it isn’t already present
     git remote add github \
       https://x-access-token:${GITHUB_PAT}@github.com/saisnaic/SNAIC-PLATFORM.git \
       || true
 
-    # One-time overwrite if GitHub has a diverging “initial commit”,
-    # otherwise behaves as a normal fast-forward push.
-    git push --force-with-lease --prune github HEAD:refs/heads/main --tags
+    # One-time overwrite (seeds GitHub).  Remove --force after it succeeds.
+    git push --force --prune github HEAD:refs/heads/main --tags
   env:
     GITHUB_PAT: $(GITHUB_PAT)
-  displayName: 'Mirror HEAD → GitHub main'
-  # Run this step only when the pipeline itself was triggered by `main`
+  displayName: 'Mirror HEAD → GitHub main (one-time force)'
   condition: eq(variables['Build.SourceBranch'], 'refs/heads/main')
