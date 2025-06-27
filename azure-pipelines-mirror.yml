@@ -1,33 +1,45 @@
-# Triggers only when main is updated
+# azure-pipelines-mirror.yml  (name/path can be anything)
+
+# ───── Trigger only when Azure Repos main is updated ─────
 trigger:
   branches:
     include:
-      - main            # <- ‘main’ in Azure Repos
+      - main       # Azure Repos branch to mirror
 
-pr: none                # don’t run for PR validation
+pr: none           # skip PR validation runs
 
+# ───── Variables ─────
+variables:
+  - group: GitHubSecrets       # contains GITHUB_PAT = your GitHub PAT
+
+# ───── Agent pool ─────
 pool:
   vmImage: ubuntu-latest
 
+# ───── Steps ─────
 steps:
-# 1) Checkout the Azure Repos source
+# 1) Checkout source
 - checkout: self
-  persistCredentials: true     # lets us fetch without re-auth
+  persistCredentials: true
+  fetchDepth: 0                # full history (optional but nice)
 
-# 2) Push main → GitHub
+# 2) Mirror commit to GitHub
 - bash: |
     set -euxo pipefail
 
+    # identify the push as CI (only used if this script ever creates commits)
     git config --global user.email "build@dev.azure.com"
     git config --global user.name  "Azure DevOps Mirror Bot"
 
-    # add the GitHub remote once (ignore if it already exists)
+    # add (or ignore-if-exists) the GitHub remote
     git remote add github \
       https://x-access-token:${GITHUB_PAT}@github.com/saisnaic/SNAIC-PLATFORM.git \
       || true
 
-    # push ONLY main + tags, overwriting history if you rewrote main
-    git push --prune github +refs/heads/main:refs/heads/main --tags
+    # push the commit we just built (HEAD) to GitHub main, prune stale refs, include tags
+    git push --prune github HEAD:refs/heads/main --tags
   env:
     GITHUB_PAT: $(GITHUB_PAT)
-  displayName: 'Mirror main → GitHub'
+  displayName: 'Mirror HEAD → GitHub main'
+  # Safety: run this step only when the build itself is for Azure Repos main
+  condition: eq(variables['Build.SourceBranch'], 'refs/heads/main')
