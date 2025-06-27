@@ -29,7 +29,7 @@ steps:
       || true
 
     # One-time overwrite (seeds GitHub).  Remove --force after it succeeds.
-    git push --force --prune github HEAD:refs/heads/main --tags
+    git push --prune github HEAD:refs/heads/main --tags
   env:
     GITHUB_PAT: $(GITHUB_PAT)
   displayName: 'Mirror HEAD → GitHub main (one-time force)'
