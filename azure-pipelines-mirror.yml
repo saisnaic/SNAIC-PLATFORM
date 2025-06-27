@@ -1,45 +1,44 @@
-# azure-pipelines-mirror.yml  (name/path can be anything)
+# azure-pipelines-mirror.yml
+# ─────────────────────────────────────────────────────────────
+# Mirrors Azure Repos `main` → GitHub `main` whenever `main` changes
 
-# ───── Trigger only when Azure Repos main is updated ─────
 trigger:
   branches:
     include:
-      - main       # Azure Repos branch to mirror
+      - main        # Azure Repos branch to watch
 
-pr: none           # skip PR validation runs
+pr: none            # don’t run for PR validation
 
-# ───── Variables ─────
 variables:
-  - group: GitHubSecrets       # contains GITHUB_PAT = your GitHub PAT
+  - group: GitHubSecrets         # secret GITHUB_PAT lives here
 
-# ───── Agent pool ─────
 pool:
   vmImage: ubuntu-latest
 
-# ───── Steps ─────
 steps:
 # 1) Checkout source
 - checkout: self
   persistCredentials: true
-  fetchDepth: 0                # full history (optional but nice)
+  fetchDepth: 0                  # full history (optional but nice)
 
-# 2) Mirror commit to GitHub
+# 2) Push the built commit to GitHub
 - bash: |
     set -euxo pipefail
 
-    # identify the push as CI (only used if this script ever creates commits)
+    # Identify automated pushes (only used if the script ever writes commits)
     git config --global user.email "build@dev.azure.com"
     git config --global user.name  "Azure DevOps Mirror Bot"
 
-    # add (or ignore-if-exists) the GitHub remote
+    # Add the GitHub remote if it isn’t already present
     git remote add github \
       https://x-access-token:${GITHUB_PAT}@github.com/saisnaic/SNAIC-PLATFORM.git \
       || true
 
-    # push the commit we just built (HEAD) to GitHub main, prune stale refs, include tags
-    git push --prune github HEAD:refs/heads/main --tags
+    # One-time overwrite if GitHub has a diverging “initial commit”,
+    # otherwise behaves as a normal fast-forward push.
+    git push --force-with-lease --prune github HEAD:refs/heads/main --tags
   env:
     GITHUB_PAT: $(GITHUB_PAT)
   displayName: 'Mirror HEAD → GitHub main'
-  # Safety: run this step only when the build itself is for Azure Repos main
+  # Run this step only when the pipeline itself was triggered by `main`
   condition: eq(variables['Build.SourceBranch'], 'refs/heads/main')
