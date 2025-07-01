@@ -46,15 +46,9 @@ stages:
         - task: KubectlInstaller@0
           inputs:
             kubectlVersion: 'latest'
-        - task: Kubernetes@1
+        - task: KubernetesManifest@1
           inputs:
-            connectionType: 'Kubernetes Service Connection'
-            kubernetesServiceEndpoint: 'K8s StackIT'
-            command: 'apply'
-            useConfigurationFile: true
-            configuration: './kubernetes/*'
-            secretType: 'dockerRegistry'
-            containerRegistryType: 'Azure Container Registry'
-            azureSubscriptionEndpointForSecrets: 'Azure Connection'
-            azureContainerRegistry: 'snaic.azurecr.io'
-            forceUpdate: false
+            action: 'deploy'
+            connectionType: 'kubernetesServiceConnection'
+            kubernetesServiceConnection: 'K8s StackIT'
+            manifests: '$(Pipeline.Workspace)/kubernetes/secrets.yml'
