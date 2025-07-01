@@ -51,4 +51,4 @@ stages:
             action: 'deploy'
             connectionType: 'kubernetesServiceConnection'
             kubernetesServiceConnection: 'K8s StackIT'
-            manifests: '$(Pipeline.Workspace)/kubernetes/secrets.yml'
+            manifests: '$(Pipeline.Workspace)/**/kubernetes/secrets.yml'
