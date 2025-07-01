@@ -37,27 +37,24 @@ stages:
 - stage: Deploy
   displayName: Deploy to cloud providers
   jobs:
-    - deployment:
+    - job:
       displayName: Deploy to StackIT
       pool:
         vmImage: ubuntu-latest
-      strategy:
-        runOnce:
-          deploy:
-            steps:
-              - checkout: self
-              - task: KubectlInstaller@0
-                inputs:
-                  kubectlVersion: 'latest'
-              - task: Kubernetes@1
-                inputs:
-                  connectionType: 'Kubernetes Service Connection'
-                  kubernetesServiceEndpoint: 'K8s StackIT'
-                  command: 'apply'
-                  useConfigurationFile: true
-                  configuration: './kubernetes/*'
-                  secretType: 'dockerRegistry'
-                  containerRegistryType: 'Azure Container Registry'
-                  azureSubscriptionEndpointForSecrets: 'Azure Connection'
-                  azureContainerRegistry: 'snaic.azurecr.io'
-                  forceUpdate: false
+      steps:
+        - checkout: self
+        - task: KubectlInstaller@0
+          inputs:
+            kubectlVersion: 'latest'
+        - task: Kubernetes@1
+          inputs:
+            connectionType: 'Kubernetes Service Connection'
+            kubernetesServiceEndpoint: 'K8s StackIT'
+            command: 'apply'
+            useConfigurationFile: true
+            configuration: './kubernetes/*'
+            secretType: 'dockerRegistry'
+            containerRegistryType: 'Azure Container Registry'
+            azureSubscriptionEndpointForSecrets: 'Azure Connection'
+            azureContainerRegistry: 'snaic.azurecr.io'
+            forceUpdate: false
