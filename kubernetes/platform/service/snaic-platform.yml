@@ -1,0 +1,13 @@
+# Platform service
+apiVersion: v1
+kind: Service
+metadata:
+  name: snaic-platform-service
+spec:
+  selector:
+    app: snaic-platform
+  ports:
+    - port: 3000
+      protocol: TCP
+      targetPort: 3000
+  type: ClusterIP

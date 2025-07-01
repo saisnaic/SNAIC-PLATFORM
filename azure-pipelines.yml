@@ -34,3 +34,30 @@ stages:
           targetPort: '3000'
           disableTelemetry: true
           environmentVariables: FLOWISE_USERNAME=flowise-user FLOWISE_PASSWORD=TestingSNAIC DATABASE_TYPE=postgres DATABASE_HOST=snaic-ai.postgres.database.azure.com DATABASE_PORT=5432 DATABASE_USER=flowise DATABASE_PASSWORD=>NLJ9Zv;h8*kheWh[C;XuiUr6Z#=$G3_ DATABASE_NAME=flowise DATABASE_SSL=true APIKEY_STORAGE_TYPE=db FLOWISE_SECRETKEY_OVERWRITE=%ZwHWFrz`p%J@tqgwmgfZDgrCvf5WyYM BLOB_STORAGE_PATH=/var/flowise/persistence
+- stage: Deploy
+  displayName: Deploy to cloud providers
+  jobs:
+    - deployment:
+      displayName: Deploy to StackIT
+      pool:
+        vmImage: ubuntu-latest
+      strategy:
+        runOnce:
+          deploy:
+            steps:
+              - checkout: self
+              - task: KubectlInstaller@0
+                inputs:
+                  kubectlVersion: 'latest'
+              - task: Kubernetes@1
+                inputs:
+                  connectionType: 'Kubernetes Service Connection'
+                  kubernetesServiceEndpoint: 'K8s StackIT'
+                  command: 'apply'
+                  useConfigurationFile: true
+                  configuration: './kubernetes/*'
+                  secretType: 'dockerRegistry'
+                  containerRegistryType: 'Azure Container Registry'
+                  azureSubscriptionEndpointForSecrets: 'Azure Connection'
+                  azureContainerRegistry: 'snaic.azurecr.io'
+                  forceUpdate: false

@@ -1,0 +1,74 @@
+# SNAIC Platform deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: snaic-platform-deployment
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: snaic-platform
+  template:
+    metadata:
+      labels:
+        app: snaic-platform
+    spec:
+      containers:
+        - name: snaic-platform
+          image: snaic.azurecr.io/snaic-platform:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3000
+          env:
+            - name: DATABASE_TYPE
+              value: postgres
+            - name: DATABASE_HOST
+              valueFrom:
+                secretKeyRef:
+                  key: db_host
+                  name: snaic-platform-secrets
+            - name: DATABASE_PORT
+              value: "5432"
+            - name: DATABASE_USER
+              valueFrom:
+                secretKeyRef:
+                  key: db_user
+                  name: snaic-platform-secrets
+            - name: DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: db_password
+                  name: snaic-platform-secrets
+            - name: DATABASE_NAME
+              valueFrom:
+                secretKeyRef:
+                  key: db_name
+                  name: snaic-platform-secrets
+            - name: DATABASE_SSL
+              value: "true"
+            - name: APIKEY
+              valueFrom:
+                secretKeyRef:
+                  key: api_key
+                  name: snaic-platform-secrets
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 3000
+            initialDelaySeconds: 3
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              port: 3000
+              path: /readiness
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          volumeMounts:
+            - mountPath: /root/.flowise
+              name: snaic-storage
+      volumes:
+        - name: snaic-storage
+          persistentVolumeClaim:
+            claimName: snaic-pvc
+      imagePullSecrets:
+        - name: acr-docker-snaic

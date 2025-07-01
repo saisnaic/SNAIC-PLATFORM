@@ -1,0 +1,23 @@
+# Snaic Platform Storage
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: snaic-pv
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/data/flowise"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: snaic-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
