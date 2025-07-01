@@ -1,0 +1,36 @@
+# azure-pipelines-mirror.yml
+# Mirrors Azure Repos `main` → GitHub `main`
+
+trigger:
+  branches:
+    include: [ main ]            # only when Azure ‘main’ changes
+pr: none                         # don’t validate PRs
+
+variables:
+  - group: GitHubSecrets         # holds secret GITHUB_PAT
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+# 1  Checkout code
+- checkout: self
+  persistCredentials: true
+  fetchDepth: 0                  # full history (good for tags & rewrites)
+
+# 2  Mirror HEAD → GitHub
+- bash: |
+    set -euxo pipefail
+    git config --global user.email "build@dev.azure.com"
+    git config --global user.name  "Azure DevOps Mirror Bot"
+
+    git remote add github \
+      https://x-access-token:${GITHUB_PAT}@github.com/saisnaic/SNAIC-PLATFORM.git \
+      || true
+
+    # One-time overwrite (seeds GitHub).  Remove --force after it succeeds.
+    git push --prune github HEAD:refs/heads/main --tags
+  env:
+    GITHUB_PAT: $(GITHUB_PAT)
+  displayName: 'Mirror HEAD → GitHub main (one-time force)'
+  condition: eq(variables['Build.SourceBranch'], 'refs/heads/main')

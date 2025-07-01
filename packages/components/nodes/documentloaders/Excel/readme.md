@@ -4,7 +4,7 @@ This custom Flowise node enables dynamic creation, styling, and export of Excel 
 
 ---
 
-
+   
 
 ![Excel Node](images/excel-node.png)
 

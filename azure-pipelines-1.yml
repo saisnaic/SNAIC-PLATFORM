@@ -1,0 +1,91 @@
+# azure-pipelines.yml
+# This pipeline mirrors changes from Azure Git to GitHub.
+
+trigger:
+- main # Or the primary branch you want to mirror (e.g., master)
+# Add other branches if you need them mirrored, for example:
+# branches:
+#   include:
+#     - main
+#     - dev
+#     - feature/*
+
+# Variables are defined in the pipeline's UI settings.
+
+pool:
+  vmImage: 'ubuntu-latest' # Using a hosted Ubuntu agent
+
+steps:
+- checkout: self # Checkout the source (Azure Git) repository
+  persistCredentials: true # Allows us to push from this repository context during the pipeline run
+  fetchDepth: 0 # IMPORTANT: This ensures a full clone, not a shallow one
+  clean: true # Ensures a clean working directory before checkout
+
+- script: |
+    echo "Starting mirroring process from Azure Git to GitHub..."
+    # Configure Git user for the commits pushed to GitHub
+    git config --global user.email "sai2000mohit@gmail.com" 
+    git config --global user.name "Azure DevOps Mirror Bot"
+  displayName: 'Configure Git User'
+
+- task: CmdLine@2
+  inputs:
+    script: |
+      # Check current remotes for debugging
+      echo "Current Git Remotes (before GitHub setup):"
+      git remote -v
+      
+      # Add GitHub as a remote if it doesn't exist.
+      git remote add github $(githubRepoUrl) || true 
+      
+      # Set up the remote URL with the PAT for authentication.
+      # This is the critical part for correct authentication and URL construction.
+      # Format: https://<github_username>:<github_pat>@github.com/<github_username>/<github_repo_name>.git
+      git remote set-url github https://$(githubUsername):$(GitHubPat)@github.com/$(githubUsername)/$(githubRepoName).git
+      
+      echo "Git Remotes after GitHub setup:"
+      git remote -v # Verify the GitHub remote is set with the correct URL (PAT will be masked)
+      
+      # Fetch all branches and tags from the current (Azure Git) repository.
+      # This ensures all remote branches/tags are visible locally.
+      echo "Fetching all branches and tags from Azure Git origin..."
+      git fetch origin --prune --tags
+      
+      echo "Listing remote branches (refs/remotes/origin) to mirror:"
+      
+      # Iterate over all remote-tracking branches from 'origin' (Azure Git)
+      # and push them individually to GitHub.
+      # We use 'refs/remotes/origin/' to get all branches from the Azure Git remote.
+      # We then push this full reference to GitHub, ensuring the remote branch is pushed.
+      for branch_ref_full in $(git for-each-ref --format='%(refname)' refs/remotes/origin/); do
+        # Extract the simple branch name (e.g., 'main' from 'refs/remotes/origin/main')
+        branch_name=$(echo "$branch_ref_full" | sed 's/^refs\/remotes\/origin\///')
+
+        # Exclude 'HEAD' which is not a real branch
+        if [[ "$branch_name" == "HEAD" ]]; then
+          continue
+        fi
+        
+        echo "Mirroring branch: $branch_name (from $branch_ref_full)"
+        # Push the full remote-tracking branch ref to GitHub, mapping it to a local-like branch name on GitHub
+        git push github "$branch_ref_full":"$branch_name" --force 2>&1 | tee -a git_push_log.txt
+        if [ ${PIPESTATUS[0]} -ne 0 ]; then
+            echo "ERROR: Push of branch $branch_name failed. See git_push_log.txt for details."
+            exit 1 # Fail the pipeline if a branch push fails
+        fi
+      done
+      
+      # Mirror all tags from Azure Git to GitHub.
+      echo "Mirroring all tags..."
+      git push github --tags --force 2>&1 | tee -a git_push_log.txt
+      if [ ${PIPESTATUS[0]} -ne 0 ]; then
+          echo "ERROR: Push of tags failed. See git_push_log.txt for details."
+          exit 1 # Fail the pipeline if tag push fails
+      fi
+      
+      echo "Mirroring complete."
+      echo "Full Git Push Log:"
+      cat git_push_log.txt
+  displayName: 'Mirror to GitHub'
+  env:
+    GitHubPat: $(GitHubPat)
